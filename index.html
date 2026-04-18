@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
+<meta name="theme-color" content="#121212"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="TimeTrack"/>
+<title>TimeTrack</title>
+<link rel="manifest" href="manifest.json"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;background:#121212;color:#fff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;overscroll-behavior:none}
+:root{
+  --bg:#121212;--card:#1e1e1e;--card2:#252525;--border:#2a2a2a;
+  --green:#4ade80;--purple:#a855f7;--blue:#60a5fa;--yellow:#fbbf24;--red:#f87171;
+  --text:#fff;--sub:#aaa;--muted:#555;
+}
+.app{display:flex;flex-direction:column;height:100%;max-width:480px;margin:0 auto;background:var(--bg)}
+/* TOPBAR */
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:max(env(safe-area-inset-top),14px) 14px 10px;background:var(--bg);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:20;gap:8px}
+.topbar h1{font-size:17px;font-weight:700;color:var(--text);flex:1}
+.topbar-btns{display:flex;gap:6px;align-items:center}
+.icon-btn{background:var(--card2);border:none;color:var(--sub);width:34px;height:34px;border-radius:9px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0}
+.icon-btn:active{opacity:.7}
+.end-day-btn{background:#3a1a1a;border:1px solid #f8717155;color:var(--red);font-size:11px;font-weight:600;padding:0 10px;height:34px;border-radius:9px;white-space:nowrap;cursor:pointer;border-width:1px}
+.end-day-btn:active{opacity:.7}
+
+/* TABS */
+.tab-bar{display:flex;background:var(--bg);border-bottom:1px solid var(--border);padding:0 10px;gap:4px;overflow-x:auto;scrollbar-width:none}
+.tab-bar::-webkit-scrollbar{display:none}
+.tab{background:none;border:none;color:var(--muted);font-size:12px;font-weight:600;padding:9px 12px;cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;letter-spacing:.3px}
+.tab.active{color:var(--text);border-bottom-color:var(--green)}
+.tab.active.type-productive{border-bottom-color:var(--purple)}
+.tab.active.type-sleep{border-bottom-color:var(--blue)}
+
+/* GRID */
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:10px;overflow-y:auto;flex:1}
+.grid.single{grid-template-columns:1fr}
+
+/* BLOCKS */
+.block{background:var(--card);border-radius:16px;padding:12px;display:flex;flex-direction:column;gap:5px;border:2px solid transparent;transition:border-color .2s,box-shadow .2s;min-height:170px;position:relative}
+.block.running.type-daily{border-color:var(--green);box-shadow:0 0 12px #4ade8022}
+.block.running.type-productive{border-color:var(--purple);box-shadow:0 0 16px #a855f733}
+.block.running.type-sleep{border-color:var(--blue);box-shadow:0 0 12px #60a5fa22}
+.type-badge{position:absolute;top:10px;right:10px;font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;letter-spacing:.5px}
+.type-daily .type-badge{background:#4ade8022;color:var(--green)}
+.type-productive .type-badge{background:#a855f722;color:var(--purple)}
+.type-sleep .type-badge{background:#60a5fa22;color:var(--blue)}
+.block-top{display:flex;align-items:center;gap:4px;padding-right:44px}
+.title-input{background:transparent;border:none;color:#e0e0e0;font-size:12px;font-weight:600;width:0;flex:1;outline:none;padding:2px 4px;border-radius:4px;caret-color:var(--green)}
+.title-input:focus{background:var(--card2)}
+.reset-btn{background:none;border:none;color:var(--muted);cursor:pointer;padding:4px;font-size:15px;flex-shrink:0}
+.reset-btn:active{color:var(--red)}
+.timer-area{display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;cursor:pointer;padding:6px 0;border-radius:10px;user-select:none;-webkit-user-select:none;gap:3px}
+.timer-area:active{background:var(--card2)}
+.timer-display{font-size:24px;font-weight:700;color:var(--text);font-variant-numeric:tabular-nums;letter-spacing:1px;line-height:1}
+.block.running.type-daily .timer-display{color:var(--green)}
+.block.running.type-productive .timer-display{color:var(--purple)}
+.block.running.type-sleep .timer-display{color:var(--blue)}
+.play-icon{font-size:11px;color:var(--muted)}
+.daily-label{font-size:10px;color:var(--muted);text-align:center}
+.avg-prod{font-size:10px;text-align:center;color:var(--purple);margin-top:1px}
+.notes-toggle{background:none;border:none;color:var(--muted);font-size:10px;cursor:pointer;text-align:left;padding:1px 0}
+.notes-input{background:var(--card2);border:none;color:var(--sub);font-size:11px;width:100%;border-radius:6px;padding:6px 8px;resize:none;outline:none;font-family:inherit;line-height:1.5;margin-top:2px}
+.add-block-row{padding:0 10px 10px;display:flex;gap:8px}
+.add-btn{flex:1;background:var(--card);border:1px dashed var(--border);color:var(--muted);padding:10px;border-radius:12px;font-size:12px;cursor:pointer;font-weight:500}
+.add-btn:active{background:var(--card2)}
+
+/* SCREENS */
+.screen{display:none;flex-direction:column;flex:1;overflow:hidden}
+.screen.active{display:flex}
+.inner-scroll{flex:1;overflow-y:auto;padding:14px;padding-bottom:max(env(safe-area-inset-bottom),20px)}
+.screen-title{font-size:16px;font-weight:700;margin-bottom:4px}
+.screen-sub{font-size:11px;color:var(--muted);margin-bottom:16px}
+.back-btn{background:var(--card2);border:none;color:var(--sub);padding:8px 14px;border-radius:8px;cursor:pointer;font-size:13px;margin-bottom:14px;display:inline-flex;align-items:center;gap:6px}
+
+/* REPORT TABS */
+.report-tabs{display:flex;gap:6px;margin-bottom:16px}
+.rtab{flex:1;background:var(--card);border:none;color:var(--muted);padding:9px 4px;border-radius:10px;font-size:12px;font-weight:600;cursor:pointer}
+.rtab.active{background:#1a2a1a;color:var(--green)}
+.report-section{margin-bottom:18px}
+.report-section-title{font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.8px;text-transform:uppercase;margin-bottom:8px}
+.report-row{display:flex;align-items:center;justify-content:space-between;padding:11px 13px;background:var(--card);border-radius:10px;margin-bottom:6px;gap:8px}
+.report-left{flex:1;min-width:0}
+.report-title{font-size:13px;color:#ddd;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.report-prod{font-size:10px;color:var(--purple);margin-top:2px}
+.report-time{font-size:13px;font-weight:700;color:var(--green);font-variant-numeric:tabular-nums;flex-shrink:0}
+.report-total{text-align:center;padding:12px;background:#1a2a1a;border-radius:10px;margin-top:4px;font-size:12px;color:var(--green);font-weight:600}
+.day-header{font-size:11px;color:var(--muted);padding:4px 0 6px;font-weight:600}
+.no-data{text-align:center;color:var(--muted);font-size:13px;padding:30px 0}
+
+/* SETTINGS */
+.setting-row{display:flex;align-items:center;justify-content:space-between;padding:13px 0;border-bottom:1px solid var(--border);gap:12px}
+.setting-label{font-size:13px;color:#ccc;font-weight:500}
+.setting-sub{font-size:11px;color:var(--muted);margin-top:3px}
+.toggle{position:relative;width:44px;height:26px;flex-shrink:0}
+.toggle input{opacity:0;width:0;height:0;position:absolute}
+.toggle-slider{position:absolute;inset:0;background:#333;border-radius:13px;cursor:pointer;transition:background .2s}
+.toggle-slider:before{content:'';position:absolute;width:20px;height:20px;background:#fff;border-radius:50%;top:3px;left:3px;transition:transform .2s}
+.toggle input:checked+.toggle-slider{background:var(--green)}
+.toggle input:checked+.toggle-slider:before{transform:translateX(18px)}
+
+/* MODAL */
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:100;align-items:flex-end;justify-content:center}
+.overlay.active{display:flex}
+.modal{background:#1a1a1a;border-radius:20px 20px 0 0;padding:22px 18px;width:100%;max-width:480px;border-top:1px solid var(--border);padding-bottom:max(env(safe-area-inset-bottom),20px);max-height:90vh;overflow-y:auto}
+.modal h3{font-size:16px;font-weight:700;margin-bottom:6px}
+.modal p{font-size:13px;color:var(--sub);margin-bottom:18px;line-height:1.5}
+.modal-btns{display:flex;flex-direction:column;gap:8px}
+.mbtn{border:none;padding:14px;border-radius:12px;font-size:14px;cursor:pointer;font-weight:600;width:100%}
+.mbtn:active{opacity:.8}
+.mbtn-cancel{background:var(--card2);color:var(--sub)}
+.mbtn-ok{background:var(--green);color:#000}
+.mbtn-danger{background:var(--red);color:#000}
+.mbtn-purple{background:var(--purple);color:#000}
+.mbtn-blue{background:var(--blue);color:#000}
+.mbtn-yellow{background:var(--yellow);color:#000}
+
+/* PRODUCTIVITY MODAL */
+.prod-modal-info{background:var(--card2);border-radius:10px;padding:12px;margin-bottom:16px;font-size:12px;color:var(--sub);line-height:1.6}
+.prod-modal-info b{color:var(--text)}
+.slider-wrap{padding:8px 0 16px}
+.slider-label{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-bottom:8px}
+.slider-val{font-size:28px;font-weight:700;color:var(--purple);text-align:center;margin-bottom:10px}
+input[type=range]{width:100%;-webkit-appearance:none;appearance:none;height:6px;border-radius:3px;background:var(--border);outline:none}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:24px;height:24px;border-radius:50%;background:var(--purple);cursor:pointer}
+input[type=range]::-moz-range-thumb{width:24px;height:24px;border-radius:50%;background:var(--purple);cursor:pointer;border:none}
+.note-add-label{font-size:11px;color:var(--muted);margin-bottom:6px}
+.note-add-input{background:var(--card2);border:none;color:var(--sub);font-size:12px;width:100%;border-radius:8px;padding:10px;resize:none;outline:none;font-family:inherit;line-height:1.4;margin-bottom:14px}
+
+/* SLEEP MODAL */
+.sleep-q{font-size:14px;font-weight:600;margin-bottom:8px;color:var(--text)}
+.sleep-sub{font-size:12px;color:var(--sub);margin-bottom:16px;line-height:1.5}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+
+<!-- MAIN SCREEN -->
+<div id="mainScreen" class="screen active" style="overflow:hidden;flex:1;display:flex;flex-direction:column">
+  <div class="topbar">
+    <h1>⏱ TimeTrack</h1>
+    <div class="topbar-btns">
+      <button class="end-day-btn" onclick="endDayPrompt()">End Day</button>
+      <button class="icon-btn" onclick="showReport()">📊</button>
+      <button class="icon-btn" onclick="showSettings()">⚙️</button>
+    </div>
+  </div>
+  <div class="tab-bar" id="tabBar"></div>
+  <div id="gridWrap" style="display:flex;flex-direction:column;flex:1;overflow:hidden">
+    <div class="grid" id="grid"></div>
+    <div class="add-block-row" id="addBlockRow">
+      <button class="add-btn" onclick="addBlock()">+ Add Block</button>
+      <button class="add-btn" style="color:var(--red)" onclick="removeLastBlock()">− Remove Last</button>
+    </div>
+  </div>
+</div>
+
+<!-- REPORT SCREEN -->
+<div id="reportScreen" class="screen">
+  <div class="inner-scroll">
+    <button class="back-btn" onclick="showMain()">← Back</button>
+    <div class="screen-title">Reports</div>
+    <div class="screen-sub" id="reportSub"></div>
+    <div class="report-tabs">
+      <button class="rtab active" id="rtab-daily" onclick="switchReportTab('daily')">Daily</button>
+      <button class="rtab" id="rtab-weekly" onclick="switchReportTab('weekly')">Weekly</button>
+      <button class="rtab" id="rtab-monthly" onclick="switchReportTab('monthly')">Monthly</button>
+    </div>
+    <div id="reportContent"></div>
+  </div>
+</div>
+
+<!-- SETTINGS SCREEN -->
+<div id="settingsScreen" class="screen">
+  <div class="inner-scroll">
+    <button class="back-btn" onclick="showMain()">← Back</button>
+    <div class="screen-title">Settings</div>
+    <div class="setting-row">
+      <div><div class="setting-label">Auto-reset at midnight</div><div class="setting-sub">Saves & resets all timers at 12:00 AM</div></div>
+      <label class="toggle"><input type="checkbox" id="autoResetToggle" onchange="saveSettings()"><span class="toggle-slider"></span></label>
+    </div>
+    <div class="setting-row">
+      <div><div class="setting-label">Clear notes on End Day</div><div class="setting-sub">Wipes notes when day ends</div></div>
+      <label class="toggle"><input type="checkbox" id="clearNotesToggle" onchange="saveSettings()"><span class="toggle-slider"></span></label>
+    </div>
+    <div class="setting-row">
+      <div><div class="setting-label">Allow multiple timers</div><div class="setting-sub">Run more than one timer at once</div></div>
+      <label class="toggle"><input type="checkbox" id="multiTimerToggle" onchange="saveSettings()"><span class="toggle-slider"></span></label>
+    </div>
+  </div>
+</div>
+
+</div><!-- end .app -->
+
+<!-- OVERLAY -->
+<div class="overlay" id="overlay">
+  <div class="modal" id="modal">
+    <h3 id="modalTitle"></h3>
+    <p id="modalMsg"></p>
+    <div id="modalExtra"></div>
+    <div class="modal-btns" id="modalBtns"></div>
+  </div>
+</div>
+
+<script>
+// ─── STORAGE ───────────────────────────────────────────────
+const SK='tt_v4', WK='tt_weekly_v4';
+function defaultState(){
+  return {
+    blocks:[
+      {id:0,title:'Study',type:'productive',notes:'',isRunning:false,startTimestamp:null,elapsedMs:0,sessions:[],avgProductivity:null},
+      {id:1,title:'Work',type:'productive',notes:'',isRunning:false,startTimestamp:null,elapsedMs:0,sessions:[],avgProductivity:null},
+      {id:2,title:'Exercise',type:'productive',notes:'',isRunning:false,startTimestamp:null,elapsedMs:0,sessions:[],avgProductivity:null},
+      {id:3,title:'Chores',type:'daily',notes:'',isRunning:false,startTimestamp:null,elapsedMs:0,sessions:[],avgProductivity:null},
+      {id:4,title:'Leisure',type:'daily',notes:'',isRunning:false,startTimestamp:null,elapsedMs:0,sessions:[],avgProductivity:null},
+      {id:5,title:'Sleep',type:'sleep',notes:'',isRunning:false,startTimestamp:null,elapsedMs:0,sessions:[],avgProductivity:null},
+    ],
+    settings:{autoResetMidnight:false,clearNotesOnReset:false,allowMultipleTimers:false},
+    lastResetDate:todayStr(),
+    activeTab:'all',
+    nextId:6
+  };
+}
+function todayStr(){return new Date().toISOString().slice(0,10)}
+function load(){try{const s=localStorage.getItem(SK);return s?JSON.parse(s):defaultState();}catch{return defaultState();}}
+function save(){try{localStorage.setItem(SK,JSON.stringify(state));}catch{}}
+function loadW(){try{const s=localStorage.getItem(WK);return s?JSON.parse(s):{};}catch{return {};}}
+function saveW(){try{localStorage.setItem(WK,JSON.stringify(weekly));}catch{}}
+
+let state=load(), weekly=loadW(), pendingResetId=null, currentReportTab='daily';
+
+// ─── TIMER LOGIC ───────────────────────────────────────────
+function getElapsed(b){
+  if(b.isRunning&&b.startTimestamp!=null) return b.elapsedMs+(Date.now()-b.startTimestamp);
+  return b.elapsedMs;
+}
+function fmtMs(ms){
+  const s=Math.floor(Math.max(0,ms)/1000);
+  return [Math.floor(s/3600),Math.floor((s%3600)/60),s%60].map(n=>String(n).padStart(2,'0')).join(':');
+}
+function fmtMsShort(ms){
+  const s=Math.floor(ms/1000),h=Math.floor(s/3600),m=Math.floor((s%3600)/60);
+  if(h>0)return h+'h '+m+'m';
+  if(m>0)return m+'m';
+  return s+'s';
+}
+function fmtTime(ts){
+  const d=new Date(ts);
+  return d.toLocaleTimeString('en',{hour:'2-digit',minute:'2-digit',hour12:true});
+}
+function stopBlockRaw(b){
+  if(b.isRunning&&b.startTimestamp!=null){
+    b.elapsedMs+=Date.now()-b.startTimestamp;
+    b.startTimestamp=null;b.isRunning=false;
+    return true;
+  }
+  return false;
+}
+function startBlockRaw(b){
+  if(!state.settings.allowMultipleTimers) state.blocks.forEach(x=>{if(x.id!==b.id)stopBlockRaw(x);});
+  b.startTimestamp=Date.now();b.isRunning=true;
+}
+
+// session start tracking
+let sessionStarts={};
+
+function toggleBlock(id){
+  const b=state.blocks.find(x=>x.id===id);if(!b)return;
+  if(b.isRunning){
+    const sessionStart=sessionStarts[id]||b.startTimestamp;
+    const sessionMs=(Date.now()-(sessionStarts[id]||b.startTimestamp));
+    stopBlockRaw(b);
+    save();renderGrid();
+    if(navigator.vibrate)navigator.vibrate(30);
+    // Post-stop logic
+    if(b.type==='productive'&&sessionMs>=5*60*1000){
+      showProductivityModal(b,sessionStart,Date.now(),sessionMs);
+    } else if(b.type==='sleep'&&sessionMs<2*60*60*1000){
+      showSleepQModal(b,sessionStart,Date.now(),sessionMs);
+    }
+    delete sessionStarts[id];
+  } else {
+    if(!state.settings.allowMultipleTimers){
+      state.blocks.forEach(x=>{if(x.id!==b.id&&x.isRunning){stopBlockRaw(x);delete sessionStarts[x.id];}});
+    }
+    sessionStarts[id]=Date.now();
+    startBlockRaw(b);
+    save();renderGrid();
+    if(navigator.vibrate)navigator.vibrate(30);
+  }
+}
+
+// ─── PRODUCTIVITY MODAL ────────────────────────────────────
+function showProductivityModal(b,startTs,endTs,sessionMs){
+  const startStr=fmtTime(startTs), endStr=fmtTime(endTs);
+  document.getElementById('modalTitle').textContent='Session Complete';
+  document.getElementById('modalMsg').textContent='';
+  document.getElementById('modalExtra').innerHTML=
+    '<div class="prod-modal-info">'+
+      '<b>'+escH(b.title)+'</b><br>'+
+      startStr+' → '+endStr+' &nbsp;·&nbsp; <b>'+fmtMsShort(sessionMs)+'</b>'+
+    '</div>'+
+    '<div class="sleep-q">How productive was this session?</div>'+
+    '<div class="slider-wrap">'+
+      '<div class="slider-val" id="prodValDisplay">75%</div>'+
+      '<input type="range" min="0" max="100" value="75" id="prodSlider" oninput="document.getElementById(\'prodValDisplay\').textContent=this.value+\'%\'">'+
+      '<div class="slider-label"><span>0%</span><span>50%</span><span>100%</span></div>'+
+    '</div>'+
+    '<div class="note-add-label">Quick note (optional)</div>'+
+    '<textarea class="note-add-input" id="prodNote" rows="2" placeholder="e.g. Got distracted halfway…"></textarea>';
+  document.getElementById('modalBtns').innerHTML='';
+  const skip=document.createElement('button');skip.className='mbtn mbtn-cancel';skip.textContent='Skip';
+  skip.onclick=closeModal;
+  const save2=document.createElement('button');save2.className='mbtn mbtn-purple';save2.textContent='Save Feedback';
+  save2.onclick=()=>{
+    const pct=parseInt(document.getElementById('prodSlider').value);
+    const note=document.getElementById('prodNote').value.trim();
+    recordSession(b,startTs,endTs,sessionMs,pct,note);
+    closeModal();
+  };
+  document.getElementById('modalBtns').appendChild(skip);
+  document.getElementById('modalBtns').appendChild(save2);
+  document.getElementById('overlay').classList.add('active');
+}
+
+function recordSession(b,startTs,endTs,sessionMs,pct,extraNote){
+  if(!b.sessions)b.sessions=[];
+  const entry={start:startTs,end:endTs,ms:sessionMs,productivity:pct};
+  b.sessions.push(entry);
+  // recalc avg
+  const prodSessions=b.sessions.filter(s=>s.productivity!=null);
+  if(prodSessions.length>0){
+    b.avgProductivity=Math.round(prodSessions.reduce((a,s)=>a+s.productivity,0)/prodSessions.length);
+  }
+  // append to notes
+  const line=fmtTime(startTs)+'→'+fmtTime(endTs)+' ('+fmtMsShort(sessionMs)+') · '+pct+'% productive'+(extraNote?' · '+extraNote:'');
+  b.notes=(b.notes?b.notes+'\n':'')+line;
+  save();renderGrid();
+}
+
+// ─── SLEEP MODAL ───────────────────────────────────────────
+function showSleepQModal(b,startTs,endTs,sessionMs){
+  document.getElementById('modalTitle').textContent='Sleep Check';
+  document.getElementById('modalMsg').textContent='';
+  document.getElementById('modalExtra').innerHTML=
+    '<div class="prod-modal-info">Timer stopped after <b>'+fmtMsShort(sessionMs)+'</b> (under 2 hours)</div>'+
+    '<div class="sleep-q">Was this efficient sleep?</div>'+
+    '<div class="sleep-sub">If not, we\'ll log it as restless time in your notes.</div>'+
+    '<div class="note-add-label">Optional note</div>'+
+    '<textarea class="note-add-input" id="sleepNote" rows="2" placeholder="e.g. Overthinking, couldn\'t fall asleep…"></textarea>';
+  document.getElementById('modalBtns').innerHTML='';
+  const no=document.createElement('button');no.className='mbtn mbtn-cancel';no.textContent='No – restless';
+  no.onclick=()=>{
+    const note=document.getElementById('sleepNote').value.trim();
+    const line=fmtTime(startTs)+'→'+fmtTime(endTs)+' ('+fmtMsShort(sessionMs)+') · Restless / not asleep'+(note?' · '+note:'');
+    b.notes=(b.notes?b.notes+'\n':'')+line;
+    save();renderGrid();closeModal();
+  };
+  const yes=document.createElement('button');yes.className='mbtn mbtn-blue';yes.textContent='Yes – good sleep';
+  yes.onclick=()=>{
+    const note=document.getElementById('sleepNote').value.trim();
+    const line=fmtTime(startTs)+'→'+fmtTime(endTs)+' ('+fmtMsShort(sessionMs)+') · Good sleep'+(note?' · '+note:'');
+    b.notes=(b.notes?b.notes+'\n':'')+line;
+    save();renderGrid();closeModal();
+  };
+  document.getElementById('modalBtns').appendChild(no);
+  document.getElementById('modalBtns').appendChild(yes);
+  document.getElementById('overlay').classList.add('active');
+}
+
+// ─── END DAY ───────────────────────────────────────────────
+function endDayPrompt(){
+  showModal('End Day?','This will save today\'s totals to your report history and reset all timers to zero. Notes are kept.',
+    [{l:'Cancel',c:'mbtn-cancel',f:closeModal},{l:'End Day & Reset',c:'mbtn-danger',f:endDayConfirm}]);
+}
+function endDayConfirm(){
+  closeModal();
+  archiveToWeekly();
+  state.blocks.forEach(b=>{
+    stopBlockRaw(b);b.elapsedMs=0;b.startTimestamp=null;b.isRunning=false;b.sessions=[];b.avgProductivity=null;
+    if(state.settings.clearNotesOnReset)b.notes='';
+  });
+  state.lastResetDate=todayStr();
+  save();buildGrid();
+}
+function checkMidnightReset(){
+  if(!state.settings.autoResetMidnight)return;
+  const today=todayStr();
+  if(state.lastResetDate&&state.lastResetDate!==today){endDayConfirm();}
+}
+
+// ─── WEEKLY ARCHIVE ────────────────────────────────────────
+function archiveToWeekly(){
+  const today=todayStr();if(!weekly[today])weekly[today]={};
+  state.blocks.forEach(b=>{
+    const e=getElapsed(b);
+    if(!weekly[today][b.id])weekly[today][b.id]={ms:0,title:b.title,type:b.type,sessions:[]};
+    weekly[today][b.id].ms=(weekly[today][b.id].ms||0)+e;
+    weekly[today][b.id].title=b.title;
+    weekly[today][b.id].type=b.type;
+    if(b.sessions&&b.sessions.length){
+      weekly[today][b.id].sessions=(weekly[today][b.id].sessions||[]).concat(b.sessions);
+    }
+  });
+  saveW();
+}
+
+// ─── REPORTS ───────────────────────────────────────────────
+function showReport(){
+  switchScreen('reportScreen');
+  renderReport();
+}
+function switchReportTab(tab){
+  currentReportTab=tab;
+  ['daily','weekly','monthly'].forEach(t=>{
+    document.getElementById('rtab-'+t).classList.toggle('active',t===tab);
+  });
+  renderReport();
+}
+function getWeekDates(){
+  const arr=[];const now=new Date();
+  for(let i=6;i>=0;i--){const d=new Date(now);d.setDate(d.getDate()-i);arr.push(d.toISOString().slice(0,10));}
+  return arr;
+}
+function getMonthDates(){
+  const arr=[];const now=new Date();
+  for(let i=29;i>=0;i--){const d=new Date(now);d.setDate(d.getDate()-i);arr.push(d.toISOString().slice(0,10));}
+  return arr;
+}
+function fmtDateLabel(str){
+  const d=new Date(str+'T00:00:00');
+  return d.toLocaleDateString('en',{weekday:'short',month:'short',day:'numeric'});
+}
+function renderReport(){
+  const sub=document.getElementById('reportSub');
+  const content=document.getElementById('reportContent');
+  const now=new Date();
+
+  if(currentReportTab==='daily'){
+    sub.textContent='Today: '+now.toLocaleDateString('en',{weekday:'long',month:'long',day:'numeric'});
+    // today live data
+    let html='<div class="report-section"><div class="report-section-title">Today (Live)</div>';
+    let total=0;
+    const groups={productive:[],daily:[],sleep:[]};
+    state.blocks.forEach(b=>{
+      const e=getElapsed(b);total+=e;
+      (groups[b.type]||groups.daily).push({title:b.title,ms:e,type:b.type,avg:b.avgProductivity});
+    });
+    ['productive','daily','sleep'].forEach(type=>{
+      if(!groups[type].length)return;
+      const label=type==='productive'?'🟣 Productive':type==='sleep'?'🔵 Sleep':'🟢 Daily';
+      html+=`<div class="day-header">${label}</div>`;
+      groups[type].forEach(r=>{
+        html+=reportRow(r.title,r.ms,r.type,r.avg);
+      });
+    });
+    html+=`<div class="report-total">Total today: ${fmtMs(total)}</div></div>`;
+    // yesterday
+    const yesterday=new Date(now);yesterday.setDate(yesterday.getDate()-1);
+    const yKey=yesterday.toISOString().slice(0,10);
+    if(weekly[yKey]){
+      html+=`<div class="report-section"><div class="report-section-title">${fmtDateLabel(yKey)}</div>`;
+      html+=renderDayRows(weekly[yKey]);html+='</div>';
+    }
+    content.innerHTML=html;
+  } else if(currentReportTab==='weekly'){
+    const dates=getWeekDates();
+    sub.textContent='Last 7 days';
+    let html='';
+    // per-block totals
+    const blockTotals={};
+    dates.forEach(d=>{
+      if(!weekly[d])return;
+      Object.entries(weekly[d]).forEach(([id,data])=>{
+        if(!blockTotals[id])blockTotals[id]={title:data.title,type:data.type,ms:0,sessions:[]};
+        blockTotals[id].ms+=data.ms||0;
+        if(data.sessions)blockTotals[id].sessions=blockTotals[id].sessions.concat(data.sessions);
+      });
+    });
+    // add live
+    state.blocks.forEach(b=>{
+      if(!blockTotals[b.id])blockTotals[b.id]={title:b.title,type:b.type,ms:0,sessions:[]};
+      blockTotals[b.id].ms+=getElapsed(b);
+      if(b.sessions)blockTotals[b.id].sessions=blockTotals[b.id].sessions.concat(b.sessions);
+    });
+    html+='<div class="report-section"><div class="report-section-title">By Block</div>';
+    let grand=0;
+    ['productive','daily','sleep'].forEach(type=>{
+      const entries=Object.values(blockTotals).filter(x=>x.type===type&&x.ms>0);
+      if(!entries.length)return;
+      const label=type==='productive'?'🟣 Productive':type==='sleep'?'🔵 Sleep':'🟢 Daily';
+      html+=`<div class="day-header">${label}</div>`;
+      entries.forEach(r=>{
+        const avgProd=r.sessions.length?Math.round(r.sessions.filter(s=>s.productivity!=null).reduce((a,s)=>a+(s.productivity||0),0)/Math.max(1,r.sessions.filter(s=>s.productivity!=null).length)):null;
+        html+=reportRow(r.title,r.ms,r.type,avgProd);grand+=r.ms;
+      });
+    });
+    html+=`<div class="report-total">Total this week: ${fmtMs(grand)}</div></div>`;
+    // day by day
+    html+='<div class="report-section"><div class="report-section-title">Day by Day</div>';
+    dates.slice().reverse().forEach(d=>{
+      if(!weekly[d])return;
+      html+=`<div class="day-header">${fmtDateLabel(d)}</div>`;
+      html+=renderDayRows(weekly[d]);
+    });
+    html+='</div>';
+    content.innerHTML=html;
+  } else {
+    const dates=getMonthDates();
+    sub.textContent='Last 30 days';
+    const blockTotals={};
+    dates.forEach(d=>{
+      if(!weekly[d])return;
+      Object.entries(weekly[d]).forEach(([id,data])=>{
+        if(!blockTotals[id])blockTotals[id]={title:data.title,type:data.type,ms:0,sessions:[]};
+        blockTotals[id].ms+=data.ms||0;
+        if(data.sessions)blockTotals[id].sessions=blockTotals[id].sessions.concat(data.sessions);
+      });
+    });
+    state.blocks.forEach(b=>{
+      if(!blockTotals[b.id])blockTotals[b.id]={title:b.title,type:b.type,ms:0,sessions:[]};
+      blockTotals[b.id].ms+=getElapsed(b);
+    });
+    let html='<div class="report-section"><div class="report-section-title">By Block (30 days)</div>';
+    let grand=0;
+    ['productive','daily','sleep'].forEach(type=>{
+      const entries=Object.values(blockTotals).filter(x=>x.type===type&&x.ms>0);
+      if(!entries.length)return;
+      const label=type==='productive'?'🟣 Productive':type==='sleep'?'🔵 Sleep':'🟢 Daily';
+      html+=`<div class="day-header">${label}</div>`;
+      entries.forEach(r=>{
+        const avgProd=r.sessions.length?Math.round(r.sessions.filter(s=>s.productivity!=null).reduce((a,s)=>a+(s.productivity||0),0)/Math.max(1,r.sessions.filter(s=>s.productivity!=null).length)):null;
+        html+=reportRow(r.title,r.ms,r.type,avgProd);grand+=r.ms;
+      });
+    });
+    html+=`<div class="report-total">Total this month: ${fmtMs(grand)}</div></div>`;
+    content.innerHTML=html;
+  }
+}
+function reportRow(title,ms,type,avgProd){
+  const prodHtml=(type==='productive'&&avgProd!=null)?`<div class="report-prod">Avg productivity: ${avgProd}%</div>`:'';
+  return `<div class="report-row"><div class="report-left"><div class="report-title">${escH(title)}</div>${prodHtml}</div><div class="report-time">${fmtMs(ms)}</div></div>`;
+}
+function renderDayRows(dayData){
+  let html='',total=0;
+  Object.values(dayData).forEach(r=>{
+    total+=r.ms||0;
+    html+=reportRow(r.title,r.ms||0,r.type,null);
+  });
+  html+=`<div style="font-size:11px;color:var(--muted);text-align:right;padding:2px 4px 8px">Total: ${fmtMsShort(total)}</div>`;
+  return html;
+}
+
+// ─── TABS ──────────────────────────────────────────────────
+function buildTabs(){
+  const bar=document.getElementById('tabBar');
+  bar.innerHTML='';
+  const tabs=[{id:'all',label:'All'},
+    {id:'productive',label:'🟣 Productive',cls:'type-productive'},
+    {id:'daily',label:'🟢 Daily',cls:'type-daily'},
+    {id:'sleep',label:'🔵 Sleep',cls:'type-sleep'}];
+  tabs.forEach(t=>{
+    const btn=document.createElement('button');
+    btn.className='tab '+(t.cls||'')+(state.activeTab===t.id?' active':'');
+    btn.textContent=t.label;
+    btn.onclick=()=>{state.activeTab=t.id;save();buildGrid();buildTabs();};
+    bar.appendChild(btn);
+  });
+}
+
+// ─── GRID ──────────────────────────────────────────────────
+function filteredBlocks(){
+  if(state.activeTab==='all')return state.blocks;
+  return state.blocks.filter(b=>b.type===state.activeTab);
+}
+function buildGrid(){
+  const grid=document.getElementById('grid');
+  grid.innerHTML='';
+  const blocks=filteredBlocks();
+  grid.className='grid'+(blocks.length===1?' single':'');
+  blocks.forEach(b=>{
+    const div=document.createElement('div');
+    div.id='block-'+b.id;
+    div.className='block type-'+b.type+(b.isRunning?' running':'');
+    const badge=b.type==='productive'?'FOCUS':b.type==='sleep'?'SLEEP':'DAILY';
+    const avg=b.type==='productive'&&b.avgProductivity!=null?`<div class="avg-prod">avg ${b.avgProductivity}% productive</div>`:'';
+    div.innerHTML=
+      `<div class="type-badge">${badge}</div>`+
+      `<div class="block-top">`+
+        `<input class="title-input" id="title-${b.id}" value="${escH(b.title)}" maxlength="20"/>`+
+        `<button class="reset-btn" onclick="resetStep1(${b.id})">↺</button>`+
+      `</div>`+
+      `<div class="timer-area" onclick="toggleBlock(${b.id})">`+
+        `<span class="timer-display" id="td-${b.id}">${fmtMs(getElapsed(b))}</span>`+
+        `<span class="play-icon" id="pi-${b.id}">${b.isRunning?'⏸':'▶'}</span>`+
+      `</div>`+
+      `<div class="daily-label" id="dl-${b.id}">${getElapsed(b)>0?fmtMsShort(getElapsed(b))+' today':''}</div>`+
+      avg+
+      `<button class="notes-toggle" id="nt-${b.id}" onclick="toggleNotes(${b.id})">${b.notes?'▾ notes':'+ notes'}</button>`+
+      `<textarea class="notes-input" id="notes-${b.id}" placeholder="Session notes auto-logged here…" rows="2" style="display:${b.notes?'block':'none'}">${escH(b.notes)}</textarea>`;
+    grid.appendChild(div);
+    document.getElementById('title-'+b.id).addEventListener('change',function(){renameBlock(b.id,this.value);});
+    document.getElementById('notes-'+b.id).addEventListener('input',function(){saveNotes(b.id,this.value);});
+  });
+}
+function renderGrid(){
+  filteredBlocks().forEach(b=>{
+    const el=document.getElementById('block-'+b.id);if(!el)return;
+    el.className='block type-'+b.type+(b.isRunning?' running':'');
+    const e=getElapsed(b);
+    const td=document.getElementById('td-'+b.id);if(td)td.textContent=fmtMs(e);
+    const pi=document.getElementById('pi-'+b.id);if(pi)pi.textContent=b.isRunning?'⏸':'▶';
+    const dl=document.getElementById('dl-'+b.id);if(dl)dl.textContent=e>0?fmtMsShort(e)+' today':'';
+  });
+}
+
+// ─── ADD / REMOVE BLOCKS ───────────────────────────────────
+function addBlock(){
+  const type=state.activeTab==='all'?'daily':state.activeTab;
+  const id=state.nextId++;
+  state.blocks.push({id,title:type==='productive'?'New Focus':type==='sleep'?'Sleep':'New Block',type,notes:'',isRunning:false,startTimestamp:null,elapsedMs:0,sessions:[],avgProductivity:null});
+  save();buildGrid();buildTabs();
+}
+function removeLastBlock(){
+  const blocks=filteredBlocks();
+  if(!blocks.length)return;
+  const last=blocks[blocks.length-1];
+  if(last.isRunning||last.elapsedMs>0){
+    showModal('Remove Block?',`"${last.title}" has recorded time. Remove anyway?`,
+      [{l:'Cancel',c:'mbtn-cancel',f:closeModal},{l:'Remove',c:'mbtn-danger',f:()=>{doRemove(last.id);closeModal();}}]);
+  } else {doRemove(last.id);}
+}
+function doRemove(id){state.blocks=state.blocks.filter(b=>b.id!==id);save();buildGrid();buildTabs();}
+
+// ─── NOTES / RENAME ────────────────────────────────────────
+function renameBlock(id,v){const b=state.blocks.find(x=>x.id===id);if(b){b.title=v.trim()||'Block';save();}}
+function saveNotes(id,v){const b=state.blocks.find(x=>x.id===id);if(b){b.notes=v;save();}}
+function toggleNotes(id){
+  const ta=document.getElementById('notes-'+id),btn=document.getElementById('nt-'+id),b=state.blocks.find(x=>x.id===id);
+  if(ta.style.display==='none'){ta.style.display='block';ta.focus();btn.textContent='▾ notes';}
+  else{ta.style.display='none';btn.textContent=b&&b.notes?'▾ notes':'+ notes';}
+}
+
+// ─── RESET ─────────────────────────────────────────────────
+function resetStep1(id){
+  const b=state.blocks.find(x=>x.id===id);if(!b)return;
+  pendingResetId=id;
+  showModal(`Reset "${b.title}"?`,'Are you sure you want to reset this timer?',
+    [{l:'Cancel',c:'mbtn-cancel',f:closeModal},{l:'OK',c:'mbtn-ok',f:resetStep2}]);
+}
+function resetStep2(){
+  const b=state.blocks.find(x=>x.id===pendingResetId);if(!b){closeModal();return;}
+  showModal('Confirm Reset','Permanently clears timer. Cannot be undone.',[
+    {l:'Cancel',c:'mbtn-cancel',f:closeModal},
+    {l:'Also clear notes',c:'mbtn-yellow',f:()=>doReset(true)},
+    {l:'Confirm Reset',c:'mbtn-danger',f:()=>doReset(false)}
+  ]);
+}
+function doReset(clearNotes){
+  const b=state.blocks.find(x=>x.id===pendingResetId);
+  if(b){
+    stopBlockRaw(b);b.elapsedMs=0;b.startTimestamp=null;b.isRunning=false;b.sessions=[];b.avgProductivity=null;
+    if(clearNotes){b.notes='';const ta=document.getElementById('notes-'+b.id);if(ta)ta.value='';}
+    save();buildGrid();
+  }
+  closeModal();
+}
+
+// ─── MODAL ─────────────────────────────────────────────────
+function showModal(title,msg,btns){
+  document.getElementById('modalTitle').textContent=title;
+  document.getElementById('modalMsg').textContent=msg;
+  document.getElementById('modalExtra').innerHTML='';
+  const bc=document.getElementById('modalBtns');bc.innerHTML='';
+  btns.forEach(b=>{const btn=document.createElement('button');btn.className='mbtn '+b.c;btn.textContent=b.l;btn.onclick=b.f;bc.appendChild(btn);});
+  document.getElementById('overlay').classList.add('active');
+}
+function closeModal(){document.getElementById('overlay').classList.remove('active');}
+document.getElementById('overlay').addEventListener('click',e=>{if(e.target===e.currentTarget)closeModal();});
+
+// ─── SCREEN NAV ────────────────────────────────────────────
+function switchScreen(active){['mainScreen','reportScreen','settingsScreen'].forEach(id=>document.getElementById(id).classList.toggle('active',id===active));}
+function showMain(){switchScreen('mainScreen');}
+function showReport(){switchScreen('reportScreen');renderReport();}
+function showSettings(){
+  switchScreen('settingsScreen');
+  document.getElementById('autoResetToggle').checked=!!state.settings.autoResetMidnight;
+  document.getElementById('clearNotesToggle').checked=!!state.settings.clearNotesOnReset;
+  document.getElementById('multiTimerToggle').checked=!!state.settings.allowMultipleTimers;
+}
+function saveSettings(){
+  state.settings.autoResetMidnight=document.getElementById('autoResetToggle').checked;
+  state.settings.clearNotesOnReset=document.getElementById('clearNotesToggle').checked;
+  state.settings.allowMultipleTimers=document.getElementById('multiTimerToggle').checked;
+  save();
+}
+
+function escH(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+// ─── INIT ──────────────────────────────────────────────────
+checkMidnightReset();
+buildTabs();
+buildGrid();
+setInterval(()=>{checkMidnightReset();renderGrid();},1000);
+
+if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
+</script>
+</body>
+</html>
